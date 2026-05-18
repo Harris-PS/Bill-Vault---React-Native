@@ -31,7 +31,16 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
+.env.*
 .env*.local
+
+# Firebase / Google services (contain API keys)
+google-services.json
+GoogleService-Info.plist
+
+# Supabase secrets
+supabase/.env
 
 # typescript
 *.tsbuildinfo
