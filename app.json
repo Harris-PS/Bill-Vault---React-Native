@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -39,7 +39,8 @@
     "plugins": [
       "expo-camera",
       "expo-image-picker",
-      "expo-barcode-scanner"
+      "expo-font",
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

@@ -119,22 +119,26 @@ CREATE OR REPLACE TRIGGER trg_preferences_updated_at
   BEFORE UPDATE ON user_preferences
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
--- ── Auto-create profile on signup ──────────────────────────────
-CREATE OR REPLACE FUNCTION handle_new_user()
+-- 1. Drop existing trigger and function if they exist to prevent conflicts
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- 2. Create trigger function with explicit public schema and SECURITY DEFINER
+CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, email, first_name, last_name, address, phone_number)
+  INSERT INTO public.profiles (id, email, first_name, last_name, address, phone_number)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-    '',
-    ''
+    COALESCE(NEW.raw_user_meta_data->>'address', ''),
+    COALESCE(NEW.raw_user_meta_data->>'phone_number', '')
   )
   ON CONFLICT (id) DO NOTHING;
 
-  INSERT INTO user_preferences (user_id)
+  INSERT INTO public.user_preferences (user_id)
   VALUES (NEW.id)
   ON CONFLICT (user_id) DO NOTHING;
 
@@ -142,9 +146,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-CREATE OR REPLACE TRIGGER on_auth_user_created
+-- 3. Create the trigger on auth.users
+CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
 -- ── Row Level Security (RLS) ───────────────────────────────────
 

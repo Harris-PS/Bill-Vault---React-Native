@@ -11,6 +11,8 @@ export const authService = {
         data: {
           first_name: data.first_name,
           last_name: data.last_name,
+          address: data.address,
+          phone_number: data.phone_number,
         },
       },
     });
@@ -18,23 +20,28 @@ export const authService = {
     if (authError) throw authError;
     if (!authData.user) throw new Error('User creation failed');
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: authData.user.id,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      address: data.address,
-      email: data.email,
-      phone_number: data.phone_number,
-    });
+    // Only perform client-side upserts if the user is immediately authenticated (Email Confirmation disabled).
+    // If Email Confirmation is enabled, session is null and RLS policies will block client-side writes.
+    // In that case, we rely fully on the PostgreSQL trigger (handle_new_user) which runs with elevated SECURITY DEFINER privileges.
+    if (authData.session) {
+      const { error: profileError } = await supabase.from('profiles').upsert({
+        id: authData.user.id,
+        first_name: data.first_name,
+        last_name: data.last_name,
+        address: data.address,
+        email: data.email,
+        phone_number: data.phone_number,
+      });
 
-    if (profileError) throw profileError;
+      if (profileError) throw profileError;
 
-    // Create default preferences
-    await supabase.from('user_preferences').insert({
-      user_id: authData.user.id,
-      dark_mode: false,
-      notifications_enabled: true,
-    });
+      // Create default preferences
+      await supabase.from('user_preferences').upsert({
+        user_id: authData.user.id,
+        dark_mode: false,
+        notifications_enabled: true,
+      });
+    }
 
     return authData;
   },
